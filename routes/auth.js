@@ -15,7 +15,7 @@ router.use((request,response,next)=>{
 
 })
 
-router.post('/register',
+router.post('/register/owner',
     celebrate(validation.registration),
     auth.isMobileExist,
     auth.register,

@@ -39,7 +39,7 @@ export const register = async(request, response, next) => {
         // 1️⃣ Encrypt password
         const hashedPassword = await bcrypt.hash(password, 10);
         request.body.password=hashedPassword
-        user.createUser(request.body).then(res => {
+        user.createOwner(request.body).then(res => {
             if (!res.status) throw {}
             request.body.userId = res.data.insertedId
             return next()

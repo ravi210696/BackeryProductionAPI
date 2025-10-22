@@ -104,3 +104,88 @@ export const resetPassword = async (request, response, next) => {
     }
 }
 
+
+export const employessExisting = async (request, response, next) => {
+    try {
+        if(requestbody.user.roleId !=1){
+            return apiResponse.unauthorizedResponse(response, "Only admin can add employees")
+        }
+        const employees = request.body.employees;
+        const duplicateMobiles = [];
+
+        // Check each mobile
+        for (const emp of employees) {
+            const existing = await user.getUserbyMobile({ mobile: emp.mobile });
+            if (existing.status) duplicateMobiles.push(emp.mobile);
+        }
+
+        if (duplicateMobiles.length > 0) {
+            return apiResponse.validationError(response, `Duplicate mobile numbers: ${duplicateMobiles.join(', ')}`);
+        }
+
+        return next();
+    } catch (error) {
+        request.logger.error("Error in employessExisting", { stack: error.stack });
+        return apiResponse.somethingResponse(response);
+    }
+};
+
+
+export const addEmployees = async (request, response, next) => {
+    try {
+        const employees = request.body.employees;
+
+        for (const emp of employees) {
+            const hashedPassword = await bcrypt.hash(emp.password ??'12345678', 10);
+
+            const userBody = {
+                orgId: request.body.user.orgId,
+                mobile: emp.mobile,
+                password: hashedPassword,
+                roleId: 2, // employee
+                address: emp.address,
+                email: emp.email,
+                createdDate: new Date(),
+                isActive: true,
+                name: emp.name,
+                employeeId: emp.employeeId
+            };
+
+            await user.createUser(userBody);
+        }
+
+        return next();
+    } catch (error) {
+        request.logger.error("Error in addEmployees", { stack: error.stack });
+        return apiResponse.somethingResponse(response, error.message);
+    }
+};
+
+export const getEmployeeList = async (request, response, next) => {
+    try {
+        const orgId = request.body.user.orgId;
+        const employeeList = await user.getEmployeesByOrgId({orgId}); 
+        if (!employeeList.status) {
+            return apiResponse.notFoundResponse(response, "No employee list");
+        }
+        request.body.employeeList = employeeList.data;
+        return next();
+    } catch (error) {
+        request.logger.error("Error in getEmployeeList", { stack: error.stack });
+        return apiResponse.somethingResponse(response, error.message);
+    }
+};
+
+export const updateEmployeeDetails = async (request, response, next) => {
+    try {
+        const result = await user.updateEmployeeById(request.body);
+        if (!result.status) {
+            return apiResponse.validationError(response, "Failed to update employee details");
+        }
+        return next();
+    } catch (error) {
+        request.logger.error("Error in updateEmployeeDetails", { stack: error.stack });
+        return apiResponse.somethingResponse(response, error.message);
+    }   
+};
+
